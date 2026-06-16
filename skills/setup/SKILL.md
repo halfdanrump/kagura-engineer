@@ -50,4 +50,4 @@ Usage: `kagura-engineer:setup` — no arguments. Add `--fix <step>` to repair on
    ```
 
    When `overall` is `ok`/`warn`, hand back to the caller so it can proceed to
-   `kagura-engineer:run`, `kagura-engineer:review`, or `kagura-engineer:goal`.
+   `kagura-engineer:run` or `kagura-engineer:review`.

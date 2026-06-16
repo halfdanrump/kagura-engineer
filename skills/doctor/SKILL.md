@@ -1,12 +1,12 @@
 ---
 name: doctor
-description: Use before any kagura-engineer run/review/goal, or when the harness reports a blocked environment — diagnoses the local setup (git, claude, gh, ollama, memory backend, gh-issue-driven plugin) by shelling out to `kagura-engineer doctor` and reports what must be fixed.
+description: Use before any kagura-engineer run/review, or when the harness reports a blocked environment — diagnoses the local setup (git, claude, gh, ollama, memory backend, gh-issue-driven plugin) by shelling out to `kagura-engineer doctor` and reports what must be fixed.
 ---
 
 # kagura-engineer: doctor
 
 Thin wrapper around the `kagura-engineer doctor` CLI verb. It is the **precondition
-gate** that the run / review / goal skills run before doing any work — and you can
+gate** that the run / review skills run before doing any work — and you can
 invoke it on its own to check the environment.
 
 **Announce:** "Using the kagura-engineer:doctor skill to check the harness environment."
@@ -44,4 +44,4 @@ result. If `kagura-engineer` is not on PATH, tell the user to install it
 
 5. **Hand off.** If `overall == "fail"`, suggest `kagura-engineer:setup` to repair the
    environment, then re-run this skill. If `overall` is `ok`/`warn`, the caller may
-   proceed to `kagura-engineer:run`, `kagura-engineer:review`, or `kagura-engineer:goal`.
+   proceed to `kagura-engineer:run` or `kagura-engineer:review`.

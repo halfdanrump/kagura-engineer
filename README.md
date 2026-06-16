@@ -8,7 +8,7 @@ An autonomous coding harness over [Claude Code](https://claude.ai/code) and
 
 The long-term goal is a memory-backed **actor** that executes real, resumable
 coding tasks (see [Roadmap](#roadmap)). Shipping **today**: `doctor` and `setup`
-stand up the environment, and `run` / `review` / `goal` drive GitHub issues to
+stand up the environment, and `run` / `review` drive GitHub issues to
 PRs through a memory-grounded loop. It's an early `0.x` harness, not a finished
 actor. [Memory Cloud](https://github.com/kagura-ai/memory-cloud) is the
 recommended backbone (free to start), with an offline SQLite fallback for the
@@ -69,7 +69,7 @@ Either way, this exposes the `kagura-engineer` CLI (entry point
 This repo also ships a thin **skill-plugin wrapper** (`.claude-plugin/` +
 `skills/`) so the harness is installable and discoverable from inside Claude
 Code. The skills (`kagura-engineer:doctor`, `:setup`, `:run`, `:review`,
-`:goal`) are *thin* — they shell out to the CLI installed above and surface its
+`:eval`) are *thin* — they shell out to the CLI installed above and surface its
 output; no harness logic is duplicated. Install the CLI first, then add the
 plugin from this repo as a marketplace source.
 
@@ -172,7 +172,7 @@ is isolated — one failing check never aborts the rest of the run.
 | `ollama` | daemon reachable at `ollama_url`, `review.models` present (tag-aware match) |
 | `haiku` | an Anthropic auth source resolves (env key or subscription cache) |
 | `memory` | backend-aware: `memory-cloud` reachable, or (when `memory_backend: local`) `memory-local` SQLite writable — host/credentials never echoed |
-| `gh-issue-driven` | the `gh-issue-driven` plugin is installed (the workflow `run`/`goal` drive) |
+| `gh-issue-driven` | the `gh-issue-driven` plugin is installed (the workflow `run` drives) |
 
 Statuses: **OK / WARN / FAIL**.
 
@@ -278,23 +278,7 @@ error) never triggers a fix.
 check out the branch you want fixed before running it — for `review <PR#> --fix`
 that means the PR's head branch.
 
-### `kagura-engineer goal`
-
-Drive a whole **milestone** to PRs: enumerate its open issues (via `gh`) and run
-the `run` loop over each, in order. It auto-continues while issues ship and
-halts at the first blocked/failed issue (resumable by re-running — already-shipped
-issues resume cleanly).
-
-```
-kagura-engineer goal v0.3              # drive milestone "v0.3" to PRs
-kagura-engineer goal v0.3 --unattended # don't pause on green/yellow (red still halts)
-kagura-engineer goal v0.3 --json
-```
-
-Exit codes: `0` all issues shipped · `1` hard fail · `2` blocked (an issue's
-gate halted — resolve it, then re-run).
-
-### Headless auth (`run` / `review --fix` / `goal`)
+### Headless auth (`run` / `review --fix`)
 
 These commands spawn headless `claude -p` subprocesses, which need a **valid
 Anthropic credential** in the environment. Two options, in recommended order:

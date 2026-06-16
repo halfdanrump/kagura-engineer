@@ -1,6 +1,6 @@
 ---
 name: init
-description: Use to bootstrap a fresh checkout for the kagura-engineer harness — scaffolds a commented repo.yaml template and adds it to .gitignore by shelling out to `kagura-engineer init`. Run this before setup/run/review/goal when no repo.yaml exists yet. Idempotent and never overwrites.
+description: Use to bootstrap a fresh checkout for the kagura-engineer harness — scaffolds a commented repo.yaml template and adds it to .gitignore by shelling out to `kagura-engineer init`. Run this before setup/run/review when no repo.yaml exists yet. Idempotent and never overwrites.
 ---
 
 # kagura-engineer: init

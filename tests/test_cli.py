@@ -636,50 +636,6 @@ def test_review_fix_fixer_failure_exits_1(monkeypatch, tmp_path):
     assert result.exit_code == 1
 
 
-# --- goal: milestone driver ------------------------------------------------
-
-
-def test_goal_all_shipped_exits_0(monkeypatch, tmp_path):
-    import kagura_engineer.cli as cli
-    from kagura_engineer.goal.result import GoalReport
-    from kagura_engineer.run.result import RunStatus
-    monkeypatch.setattr(cli, "run_milestone",
-                        lambda cfg, m, **kw: GoalReport(milestone=m, status=RunStatus.OK), raising=True)
-    cfg = _write_cfg_review(tmp_path)
-    result = runner.invoke(app, ["goal", "v0.3", "-c", str(cfg)])
-    assert result.exit_code == 0
-
-
-def test_goal_blocked_exits_2(monkeypatch, tmp_path):
-    import kagura_engineer.cli as cli
-    from kagura_engineer.goal.result import GoalReport
-    from kagura_engineer.run.result import RunStatus
-    monkeypatch.setattr(cli, "run_milestone",
-                        lambda cfg, m, **kw: GoalReport(milestone=m, status=RunStatus.BLOCKED,
-                                                        resume_hint="x"), raising=True)
-    cfg = _write_cfg_review(tmp_path)
-    result = runner.invoke(app, ["goal", "v0.3", "-c", str(cfg)])
-    assert result.exit_code == 2
-
-
-def test_goal_bad_config_exits_2(tmp_path):
-    result = runner.invoke(app, ["goal", "v0.3", "-c", str(tmp_path / "nope.yaml")])
-    assert result.exit_code == 2
-
-
-def test_goal_json_emits_status(monkeypatch, tmp_path):
-    import json as _json
-    import kagura_engineer.cli as cli
-    from kagura_engineer.goal.result import GoalReport
-    from kagura_engineer.run.result import RunStatus
-    monkeypatch.setattr(cli, "run_milestone",
-                        lambda cfg, m, **kw: GoalReport(milestone=m, status=RunStatus.OK), raising=True)
-    cfg = _write_cfg_review(tmp_path)
-    result = runner.invoke(app, ["goal", "v0.3", "-c", str(cfg), "--json"])
-    assert result.exit_code == 0
-    assert _json.loads(result.stdout)["milestone"] == "v0.3"
-
-
 def test_run_unattended_flag_threads(monkeypatch, tmp_path):
     import kagura_engineer.cli as cli
     from kagura_engineer.run.result import RunReport
@@ -688,20 +644,6 @@ def test_run_unattended_flag_threads(monkeypatch, tmp_path):
                         lambda cfg, issue, **kw: (seen.update(kw) or RunReport(issue=issue)), raising=True)
     cfg = _write_cfg_review(tmp_path)
     r = runner.invoke(app, ["run", "5", "-c", str(cfg), "--unattended"])
-    assert r.exit_code == 0
-    assert seen.get("unattended") is True
-
-
-def test_goal_unattended_flag_threads(monkeypatch, tmp_path):
-    import kagura_engineer.cli as cli
-    from kagura_engineer.goal.result import GoalReport
-    from kagura_engineer.run.result import RunStatus
-    seen = {}
-    monkeypatch.setattr(cli, "run_milestone",
-                        lambda cfg, m, **kw: (seen.update(kw) or GoalReport(milestone=m, status=RunStatus.OK)),
-                        raising=True)
-    cfg = _write_cfg_review(tmp_path)
-    r = runner.invoke(app, ["goal", "v0.3", "-c", str(cfg), "--unattended"])
     assert r.exit_code == 0
     assert seen.get("unattended") is True
 
@@ -729,34 +671,6 @@ def test_run_json_carries_profile_without_header(write_cfg, monkeypatch):
     data = json.loads(result.stdout)  # parses → no header lines leaked
     assert data["profile"]["brain_backend"] == "claude"
     assert data["profile"]["context_id"]
-
-
-def test_goal_prints_profile_header(monkeypatch, tmp_path):
-    import kagura_engineer.cli as cli
-    from kagura_engineer.goal.result import GoalReport
-    from kagura_engineer.run.result import RunStatus
-    monkeypatch.setattr(cli, "run_milestone",
-                        lambda cfg, m, **kw: GoalReport(milestone=m, status=RunStatus.OK),
-                        raising=True)
-    cfg = _write_cfg_review(tmp_path)
-    result = runner.invoke(app, ["goal", "v0.3", "-c", str(cfg)])
-    assert result.exit_code == 0
-    assert "brain: claude" in result.stdout
-
-
-def test_goal_json_carries_profile(monkeypatch, tmp_path):
-    import json as _json
-    import kagura_engineer.cli as cli
-    from kagura_engineer.goal.result import GoalReport
-    from kagura_engineer.run.result import RunStatus
-    monkeypatch.setattr(cli, "run_milestone",
-                        lambda cfg, m, **kw: GoalReport(milestone=m, status=RunStatus.OK),
-                        raising=True)
-    cfg = _write_cfg_review(tmp_path)
-    result = runner.invoke(app, ["goal", "v0.3", "-c", str(cfg), "--json"])
-    assert result.exit_code == 0
-    data = _json.loads(result.stdout)
-    assert data["profile"]["brain_backend"] == "claude"
 
 
 def _patch_review_pr_green(monkeypatch):

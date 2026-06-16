@@ -31,9 +31,9 @@ SKILLS_DIR = REPO_ROOT / "skills"
 PYPROJECT = REPO_ROOT / "pyproject.toml"
 
 # Every CLI verb that gets a skill wrapper. init/doctor/setup are setup helpers
-# (init scaffolds repo.yaml); run/review/goal are the harness flows.
-EXPECTED_SKILLS = ["init", "doctor", "setup", "run", "review", "goal", "eval"]
-HARNESS_SKILLS = ["run", "review", "goal", "eval"]
+# (init scaffolds repo.yaml); run/review are the harness flows.
+EXPECTED_SKILLS = ["init", "doctor", "setup", "run", "review", "eval"]
+HARNESS_SKILLS = ["run", "review", "eval"]
 
 _FRONTMATTER_RE = re.compile(r"^---\n(.*?)\n---\n", re.DOTALL)
 
@@ -160,10 +160,10 @@ def test_skill_has_usage_affordance(verb):
     )
 
 
-@pytest.mark.parametrize("verb", ["run", "goal"])
+@pytest.mark.parametrize("verb", ["run"])
 def test_required_arg_skill_has_placeholder_help(verb):
     _, text = _frontmatter(SKILLS_DIR / verb / "SKILL.md")
-    # run/goal take a required argument — they must instruct "no arg → print
+    # run takes a required argument — it must instruct "no arg → print
     # usage and stop" rather than guessing/shelling out, and show an example.
     assert "No-argument usage" in text, f"{verb}: missing placeholder-help section"
     assert "Example:" in text, f"{verb}: placeholder help should show an Example"

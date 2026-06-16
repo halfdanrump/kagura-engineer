@@ -25,9 +25,6 @@ from .eval.render import print_table as eval_print_table
 from .eval.render import to_json as eval_to_json
 from .doctor.render import print_table, to_json
 from .doctor.result import CheckResult, Status
-from .goal import GOAL_STATUS_EXIT, run_milestone
-from .goal.render import print_table as goal_print_table
-from .goal.render import to_json as goal_to_json
 from .run import STATUS_EXIT, run_idea
 from .run.render import print_table as run_print_table
 from .run.render import to_json as run_to_json
@@ -477,61 +474,6 @@ def review(
         review_print_table(report)
 
     raise typer.Exit(code=REVIEW_STATUS_EXIT[report.status])
-
-
-# ---------------------------------------------------------------------------
-# goal (drive a whole milestone to PRs — multi-issue run loop)
-# ---------------------------------------------------------------------------
-
-
-@app.command()
-def goal(
-    milestone: str = typer.Argument(..., help="GitHub milestone title to drive to PRs"),
-    config: str = _CONFIG_OPT,
-    no_remember: bool = typer.Option(
-        False, "--no-remember", help="skip memory persist (recall still happens)"
-    ),
-    unattended: bool = typer.Option(
-        False, "--unattended",
-        help="dial HITL down across issues: proceed on green/yellow without "
-             "asking (red/unknown still halt)",
-    ),
-    json_out: bool = typer.Option(
-        False, "--json",
-        help="emit the milestone report as JSON; per-issue phase progress "
-             "streaming is suppressed so stdout stays a single valid JSON document",
-    ),
-) -> None:
-    """Drive every open issue in a milestone to a PR via the run loop.
-
-    Auto-continues while issues ship; halts at the first blocked/failed issue
-    (resumable by re-running). Exit codes: 0 = all shipped · 1 = hard fail ·
-    2 = blocked.
-    """
-    try:
-        cfg = load_config(config)
-        prof = resolve_profile(cfg, os.environ, Path.cwd())
-    except ConfigError as exc:
-        typer.echo(f"goal: invalid config '{config}': {exc}", err=True)
-        raise typer.Exit(code=2)
-
-    # issue #12: per-issue phase progress to stdout (suppressed under --json),
-    # so a multi-issue milestone is not silent until the final table.
-    progress = None if json_out else typer.echo
-    # issue #70: the profile is per-config, not per-issue — print once up-front.
-    _echo_profile(prof, json_out)
-    report = replace(
-        run_milestone(cfg, milestone, no_remember=no_remember,
-                      unattended=unattended, progress=progress),
-        profile=prof,
-    )
-
-    if json_out:
-        typer.echo(goal_to_json(report))
-    else:
-        goal_print_table(report)
-
-    raise typer.Exit(code=GOAL_STATUS_EXIT[report.status])
 
 
 # ---------------------------------------------------------------------------

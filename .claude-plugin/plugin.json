@@ -1,7 +1,7 @@
 {
   "name": "kagura-engineer",
   "version": "0.4.1",
-  "description": "Autonomous coding harness over Claude Code + Kagura Memory — thin skill wrapper around the kagura-engineer CLI (init / doctor / setup / run / review / goal / eval). A Tier-2 Harness: it mutates the repo, creates PRs, spends model budget, and gates on HITL. Skills shell out to the installed CLI; no harness logic is reimplemented.",
+  "description": "Autonomous coding harness over Claude Code + Kagura Memory — thin skill wrapper around the kagura-engineer CLI (init / doctor / setup / run / review / eval). A Tier-2 Harness: it mutates the repo, creates PRs, spends model budget, and gates on HITL. Skills shell out to the installed CLI; no harness logic is reimplemented.",
   "author": {
     "name": "Kagura AI, Inc.",
     "url": "https://github.com/kagura-ai"

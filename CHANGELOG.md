@@ -8,6 +8,14 @@ While the project is in `0.x`, minor versions may carry breaking changes.
 
 ## [Unreleased]
 
+### Removed
+
+- **BREAKING:** the milestone-harness `goal` is removed — the `kagura-engineer
+  goal` CLI subcommand and the `kagura-engineer:goal` skill no longer exist. The
+  harness now drives a single issue (`run`) or a PR review (`review`); to drive a
+  whole milestone, loop `run` over the issues yourself. `goal` only looped `run`,
+  so `run`/`review`/`doctor`/`setup`/`init`/`eval` are unaffected. (#89)
+
 ## [0.4.1] — 2026-06-13
 
 ### Fixed

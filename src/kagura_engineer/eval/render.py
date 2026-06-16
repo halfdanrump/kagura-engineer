@@ -1,6 +1,6 @@
 """Renderers for `EvalReport` — the A/B moat table (rich) + JSON.
 
-Mirrors run/render.py and goal/render.py: a `to_json` for machine consumption
+Mirrors run/render.py: a `to_json` for machine consumption
 (the reproducible artifact the issue asks for) and a `print_table` for humans.
 """
 from __future__ import annotations

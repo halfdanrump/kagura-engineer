@@ -5,7 +5,7 @@ import kagura_engineer
 
 
 def test_version_exposed():
-    assert kagura_engineer.__version__ == "0.4.1"
+    assert kagura_engineer.__version__ == "0.5.0"
 
 
 def test_kagura_brain_pinned_to_0_4_1_plus():

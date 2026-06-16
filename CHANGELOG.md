@@ -8,6 +8,8 @@ While the project is in `0.x`, minor versions may carry breaking changes.
 
 ## [Unreleased]
 
+## [0.5.0] — 2026-06-16
+
 ### Removed
 
 - **BREAKING:** the milestone-harness `goal` is removed — the `kagura-engineer

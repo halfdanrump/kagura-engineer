@@ -284,10 +284,10 @@ These commands spawn headless `claude -p` subprocesses, which need a **valid
 Anthropic credential** in the environment. Two options, in recommended order:
 
 1. **A Claude Pro/Max subscription (recommended)** — run `claude` once to
-   `claude login`. `run`/`goal` fan out *many* `claude -p` phases per issue, so a
+   `claude login`. `run` fans out *many* `claude -p` phases per issue, so a
    flat-rate subscription is dramatically cheaper than metered API billing for an
    autonomous loop. Caveat: heavy runs can hit subscription rate limits — if you
-   drive a whole milestone unattended (CI/cron), use an API key instead.
+   loop `run` over many issues unattended (CI/cron), use an API key instead.
 2. **`ANTHROPIC_API_KEY`** — a metered API key. Best for unattended CI where no
    interactive `claude login` seat exists. Must be a real value (an empty string
    is treated as unset).
@@ -313,7 +313,7 @@ kagura-engineer/
 ├── pyproject.toml
 ├── docs/plan/                 # design docs (plan-2-setup.md, …)
 ├── src/kagura_engineer/
-│   ├── cli.py                 # typer app: doctor / setup / run / review / goal / eval
+│   ├── cli.py                 # typer app: doctor / setup / run / review / eval
 │   ├── config.py              # repo.yaml loader + Config (pydantic)
 │   ├── proc.py                # shared subprocess helper
 │   ├── doctor/                # Plan 1 — checks, registry, result, render
@@ -335,8 +335,6 @@ kagura-engineer/
 │   │   └── gate.py · workflow.py · worktree.py · result.py · render.py
 │   ├── review/                # Plan 4 — reviewer launch + verdict gate
 │   │   └── reviewer.py · envelope.py · loop.py · fixer.py · context.py · …
-│   ├── goal/                  # milestone driver over run
-│   │   └── issues.py · render.py · result.py
 │   └── eval/                  # #57 — A/B: memory-grounded uplift (run loop ×2)
 │       └── metrics.py · result.py · render.py
 └── tests/                     # pytest (pythonpath = src)

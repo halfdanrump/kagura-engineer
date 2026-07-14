@@ -10,6 +10,8 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
+from kagura_brain import claude as brain_claude
+
 from .._http import build_request
 from .._launch import run_text
 from ..setup.auth import AuthMethod, resolve_anthropic_auth
@@ -469,4 +471,141 @@ def check_gh_issue_driven() -> CheckResult:
         Status.FAIL,
         "gh-issue-driven plugin not found",
         "install the gh-issue-driven Claude Code plugin (run requires it)",
+    )
+
+
+# --- headless-exec probe (issue #93) ---------------------------------------
+#
+# A headless `claude -p` cannot answer Claude Code's permission prompts, so
+# every capability a run needs must be pre-granted (the repo's
+# `.claude/settings.json` allowlist + the workspace-trust flag). None of the
+# static checks can see those grants, and the walls fail one at a time at
+# runtime — Bash first (start), Edit/Write later (implement). The probe asks a
+# real headless claude, in the target repo, to exercise both capabilities and
+# report which one is blocked. Opt-in (`doctor --exec-probe`): it is the only
+# check that spends tokens and a model round-trip.
+#
+# Launch goes through kagura_brain.claude.invoke — the single hardened
+# `claude -p` launcher (#40): env scrub, Windows shim resolution, timeout-as-
+# result. Constructing a bare claude argv here would revive the unhardened
+# twin the #40 migration removed (test_launcher_seam guards it).
+
+_EXEC_PROBE_MARKER = "KAGURA_EXEC_PROBE"
+_EXEC_PROBE_TMP = ".kagura-exec-probe.tmp"
+# A model round-trip plus two tool calls, not a 5 s CLI check.
+_EXEC_PROBE_TIMEOUT = 180
+
+_EXEC_PROBE_PROMPT = (
+    "You are a non-interactive permissions probe for this repository. Do "
+    "exactly this, in order, and nothing else:\n"
+    "1. Run the command `git status` with your Bash tool.\n"
+    f"2. Create a file named {_EXEC_PROBE_TMP} containing the single word "
+    "probe, using your file-writing tool.\n"
+    "If a tool call is blocked, denied, or requires approval, record that "
+    "capability as blocked and continue to the next step. Do not attempt "
+    "workarounds or alternative tools.\n"
+    "Finally print exactly one line, last:\n"
+    f"{_EXEC_PROBE_MARKER} bash=<ok|blocked> write=<ok|blocked>\n"
+)
+
+_EXEC_PROBE_HINT = (
+    "pre-grant headless permissions: add the needed Bash(...) patterns plus "
+    "Edit/Write to permissions.allow in <repo>/.claude/settings.json, and "
+    "trust the repo (and the .kagura-runs worktree dir) in Claude Code — a "
+    "headless run cannot answer approval prompts; see README § Headless "
+    "permissions"
+)
+
+
+def _parse_exec_probe_marker(stdout: str) -> dict[str, str] | None:
+    """The capability map from the LAST marker line, or None if absent.
+
+    Last-wins mirrors the run gate's trailing-marker rule: the prompt itself
+    contains a template of the marker line, and some transcripts echo it, so
+    the first occurrence may be the template rather than the answer. A
+    template echo (`bash=<ok|blocked>`) parses as blocked-ish values, which is
+    exactly why only the last line counts.
+    """
+    for line in reversed(stdout.splitlines()):
+        line = line.strip()
+        if not line.startswith(_EXEC_PROBE_MARKER):
+            continue
+        caps: dict[str, str] = {}
+        for token in line[len(_EXEC_PROBE_MARKER):].split():
+            key, sep, value = token.partition("=")
+            if sep:
+                caps[key] = value
+        return caps
+    return None
+
+
+def check_headless_exec(repo: Path) -> CheckResult:
+    """Live-probe that a headless claude can act in `repo` (issue #93).
+
+    Runs `claude -p` in the repo asking it to (a) run one harmless command and
+    (b) write one temp file, then parses the reported capability map. Catches
+    all three permission walls (Bash allowlist, workspace trust, Edit/Write)
+    before a real run burns a dispatch on them.
+    """
+    name = "headless-exec"
+    if shutil.which("claude") is None:
+        return CheckResult(
+            name,
+            Status.FAIL,
+            "claude not found on PATH; cannot probe",
+            "fix the brain-cli check first, then re-run with --exec-probe",
+        )
+    try:
+        res = brain_claude.invoke(
+            _EXEC_PROBE_PROMPT, cwd=repo, timeout=_EXEC_PROBE_TIMEOUT,
+        )
+    except (OSError, subprocess.SubprocessError) as exc:
+        return CheckResult(name, Status.FAIL, f"probe launch failed: {exc}", None)
+    finally:
+        # The probe file is written by the child; remove it no matter how the
+        # probe ended so repeated doctor runs never dirty the work tree.
+        try:
+            (repo / _EXEC_PROBE_TMP).unlink()
+        except OSError:
+            pass
+    if res.timed_out:
+        return CheckResult(
+            name,
+            Status.FAIL,
+            f"probe timed out after {_EXEC_PROBE_TIMEOUT}s",
+            "a headless claude that hangs usually awaits a permission "
+            "approval nobody can give; " + _EXEC_PROBE_HINT,
+        )
+    if res.returncode != 0:
+        return CheckResult(
+            name,
+            Status.FAIL,
+            f"claude exited {res.returncode}: {res.detail() or '(no output)'}",
+            None,
+        )
+    caps = _parse_exec_probe_marker(res.stdout or "")
+    if caps is None:
+        return CheckResult(
+            name,
+            Status.WARN,
+            "probe ran but printed no marker line; capability state unknown",
+            "re-run with --exec-probe; if it persists, probe manually with "
+            "`claude -p` in the repo",
+        )
+    blocked = []
+    if caps.get("bash") != "ok":
+        blocked.append("commands (Bash)")
+    if caps.get("write") != "ok":
+        blocked.append("file edits (Write)")
+    if blocked:
+        return CheckResult(
+            name,
+            Status.FAIL,
+            "headless claude is blocked on: " + ", ".join(blocked),
+            _EXEC_PROBE_HINT,
+        )
+    return CheckResult(
+        name,
+        Status.OK,
+        "headless claude can run commands and edit files in this repo",
     )

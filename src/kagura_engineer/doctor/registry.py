@@ -60,17 +60,25 @@ _CLOUD_ONLY_CHECKS: list[tuple[str, callable, bool]] = [
 ]
 
 
-def run_all(cfg: Config | None) -> list[CheckResult]:
+def run_all(cfg: Config | None, *, exec_probe: bool = False) -> list[CheckResult]:
     """Run the dependency checks.
 
     With a valid `cfg`, runs the full plan as before. With `cfg is None`
     (a missing/invalid config — issue #71), runs only the config-free subset
     so `doctor` can still report a useful degraded picture instead of refusing.
+
+    `exec_probe` (issue #93) appends the headless-exec live probe — opt-in
+    because it is the only check that spends tokens and a full model
+    round-trip (~30 s+). Config-free: it probes the cwd repo, not the config.
     """
     results: list[CheckResult] = []
     plan = list(_CHECKS)
     if cfg is not None and cfg.memory_backend == "cloud":
         plan += _CLOUD_ONLY_CHECKS
+    if exec_probe:
+        plan.append(
+            ("headless-exec", lambda c: checks.check_headless_exec(Path.cwd()), False)
+        )
     for name, fn, needs_config in plan:
         if cfg is None and needs_config:
             continue

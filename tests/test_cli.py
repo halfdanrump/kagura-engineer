@@ -48,7 +48,7 @@ def test_version_flag_prints_version():
 def test_doctor_json_all_ok(write_cfg, monkeypatch):
     monkeypatch.setattr(
         "kagura_engineer.cli.run_all",
-        lambda cfg: [CheckResult("git", Status.OK, "ok")],
+        lambda cfg, **kw: [CheckResult("git", Status.OK, "ok")],
     )
     result = runner.invoke(app, ["doctor", "--config", str(write_cfg), "--json"])
     assert result.exit_code == 0
@@ -60,7 +60,7 @@ def test_doctor_prints_profile_block_above_table(write_cfg, monkeypatch):
     # resolved execution-profile block precedes the check table.
     monkeypatch.setattr(
         "kagura_engineer.cli.run_all",
-        lambda cfg: [CheckResult("git", Status.OK, "ok")],
+        lambda cfg, **kw: [CheckResult("git", Status.OK, "ok")],
     )
     result = runner.invoke(app, ["doctor", "--config", str(write_cfg)])
     assert result.exit_code == 0
@@ -73,7 +73,7 @@ def test_doctor_json_carries_profile(write_cfg, monkeypatch):
     import json
     monkeypatch.setattr(
         "kagura_engineer.cli.run_all",
-        lambda cfg: [CheckResult("git", Status.OK, "ok")],
+        lambda cfg, **kw: [CheckResult("git", Status.OK, "ok")],
     )
     result = runner.invoke(app, ["doctor", "--config", str(write_cfg), "--json"])
     assert result.exit_code == 0
@@ -85,7 +85,7 @@ def test_doctor_json_carries_profile(write_cfg, monkeypatch):
 def test_doctor_exit_1_on_fail(write_cfg, monkeypatch):
     monkeypatch.setattr(
         "kagura_engineer.cli.run_all",
-        lambda cfg: [CheckResult("gh", Status.FAIL, "no auth", "gh auth login")],
+        lambda cfg, **kw: [CheckResult("gh", Status.FAIL, "no auth", "gh auth login")],
     )
     result = runner.invoke(app, ["doctor", "--config", str(write_cfg), "--json"])
     assert result.exit_code == 1
@@ -432,7 +432,7 @@ def test_doctor_missing_config_degraded_report(tmp_path, monkeypatch):
     # the synthetic config row + that run_all was invoked with None.
     seen = {}
 
-    def _spy(cfg):
+    def _spy(cfg, **kw):
         seen["cfg"] = cfg
         return [CheckResult("git", Status.OK, "ok")]
 
@@ -445,7 +445,7 @@ def test_doctor_missing_config_degraded_report(tmp_path, monkeypatch):
 
 
 def test_doctor_invalid_config_degraded_report(tmp_path, monkeypatch):
-    monkeypatch.setattr("kagura_engineer.cli.run_all", lambda cfg: [])
+    monkeypatch.setattr("kagura_engineer.cli.run_all", lambda cfg, **kw: [])
     bad = tmp_path / "repo.yaml"
     bad.write_text("profile: coding\n")  # cloud backend, blank creds → invalid
     result = runner.invoke(app, ["doctor", "--config", str(bad)])
@@ -454,7 +454,7 @@ def test_doctor_invalid_config_degraded_report(tmp_path, monkeypatch):
 
 
 def test_doctor_malformed_yaml_degraded_report(tmp_path, monkeypatch):
-    monkeypatch.setattr("kagura_engineer.cli.run_all", lambda cfg: [])
+    monkeypatch.setattr("kagura_engineer.cli.run_all", lambda cfg, **kw: [])
     bad = tmp_path / "repo.yaml"
     bad.write_text("profile: coding\n\tbad: tab\n")
     result = runner.invoke(app, ["doctor", "--config", str(bad)])
@@ -469,7 +469,7 @@ def test_doctor_degraded_json_has_config_check_object(tmp_path, monkeypatch):
 
     monkeypatch.setattr(
         "kagura_engineer.cli.run_all",
-        lambda cfg: [CheckResult("git", Status.OK, "ok")],
+        lambda cfg, **kw: [CheckResult("git", Status.OK, "ok")],
     )
     missing = tmp_path / "nope.yaml"
     result = runner.invoke(app, ["doctor", "--config", str(missing), "--json"])

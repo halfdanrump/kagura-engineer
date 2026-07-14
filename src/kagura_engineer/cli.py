@@ -116,7 +116,15 @@ def _degraded_config_check(load: ConfigLoad) -> CheckResult:
 
 @app.command()
 def doctor(
-    config: str = _CONFIG_OPT, json_out: bool = typer.Option(False, "--json")
+    config: str = _CONFIG_OPT,
+    json_out: bool = typer.Option(False, "--json"),
+    exec_probe: bool = typer.Option(
+        False,
+        "--exec-probe",
+        help="Also live-probe that a headless claude can run commands and "
+        "edit files in this repo (spends tokens and a model round-trip; "
+        "catches the permission walls that red-halt runs — issue #93).",
+    ),
 ) -> None:
     """Check the dependency chain.
 
@@ -130,7 +138,7 @@ def doctor(
     prof = None
     if load.cfg is None:
         # Degraded report: headline config row first, then config-free checks.
-        results = [_degraded_config_check(load), *run_all(None)]
+        results = [_degraded_config_check(load), *run_all(None, exec_probe=exec_probe)]
     else:
         # issue #70: resolve the execution profile up-front. resolve_profile
         # raises only ConfigError (codex half-pair); degrade like an invalid
@@ -139,10 +147,10 @@ def doctor(
             prof = resolve_profile(load.cfg, os.environ, Path.cwd())
         except ConfigError as exc:
             degraded = ConfigLoad(cfg=None, error=str(exc), missing=False)
-            results = [_degraded_config_check(degraded), *run_all(None)]
+            results = [_degraded_config_check(degraded), *run_all(None, exec_probe=exec_probe)]
         else:
             _echo_profile(prof, json_out)
-            results = run_all(load.cfg)
+            results = run_all(load.cfg, exec_probe=exec_probe)
     if json_out:
         typer.echo(to_json(
             results, profile=profile_dict(prof) if prof is not None else None

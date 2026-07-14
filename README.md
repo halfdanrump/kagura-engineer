@@ -173,6 +173,7 @@ is isolated — one failing check never aborts the rest of the run.
 | `haiku` | an Anthropic auth source resolves (env key or subscription cache) |
 | `memory` | backend-aware: `memory-cloud` reachable, or (when `memory_backend: local`) `memory-local` SQLite writable — host/credentials never echoed |
 | `gh-issue-driven` | the `gh-issue-driven` plugin is installed (the workflow `run` drives) |
+| `headless-exec` | *(opt-in: `--exec-probe`)* a live headless `claude -p` in this repo can actually run commands and edit files — catches the [headless permission](#headless-permissions-run--doctor---exec-probe) walls pre-flight |
 
 Statuses: **OK / WARN / FAIL**.
 
@@ -180,6 +181,7 @@ Statuses: **OK / WARN / FAIL**.
 kagura-engineer doctor
 kagura-engineer doctor --json
 kagura-engineer doctor -c path/to/repo.yaml
+kagura-engineer doctor --exec-probe   # + live headless-permissions probe (spends tokens, ~30 s+)
 ```
 
 Exit codes: `0` all OK/WARN · `1` any FAIL. A missing/invalid `repo.yaml` no
@@ -302,6 +304,47 @@ works, so a bad credential surfaces as a phase that can't produce a verdict.
 > ```
 > env -u ANTHROPIC_API_KEY kagura-engineer run 42
 > ```
+
+### Headless permissions (`run` / `doctor --exec-probe`)
+
+A headless `claude -p` has **no human to answer Claude Code's permission
+prompts** — a tool call that would normally pop an "allow?" dialog just hangs
+and gets reported as blocked, and the run red-halts. Every capability a run
+needs must therefore be granted *up front*, in two places:
+
+1. **The repo's `.claude/settings.json` allowlist** — commit one with the
+   commands and tools a run actually uses. `Edit`/`Write` are **separate
+   permissions from the Bash patterns**: with only a Bash allowlist, `start`
+   passes (it only runs commands) and `implement` red-halts (it has to write
+   code). A working baseline:
+
+   ```json
+   {
+     "permissions": {
+       "allow": [
+         "Edit", "Write", "NotebookEdit",
+         "Bash(git status *)", "Bash(git diff *)", "Bash(git log *)",
+         "Bash(git add *)", "Bash(git commit *)", "Bash(git checkout *)",
+         "Bash(git push *)", "Bash(git fetch *)",
+         "Bash(gh auth status)", "Bash(gh issue view *)",
+         "Bash(gh pr create *)", "Bash(gh pr view *)", "Bash(gh api *)",
+         "Bash(pytest *)", "Bash(uv run *)"
+       ]
+     }
+   }
+   ```
+
+2. **Workspace trust** — the allowlist is honoured only for directories the
+   *human* has trusted in Claude Code (`hasTrustDialogAccepted` in
+   `~/.claude.json`). Open `claude` once in the repo **and** once in the
+   `.kagura-runs/<repo>/` worktree area and accept the trust dialog. This step
+   is deliberately human-only: an agent must not be able to widen its own
+   permissions.
+
+`doctor --exec-probe` verifies both end-to-end: it launches a real headless
+claude in the repo, asks it to run one harmless command and write one temp
+file, and reports exactly which capability is blocked — before a real run
+burns a dispatch discovering it.
 
 ---
 

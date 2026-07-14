@@ -76,8 +76,11 @@ def run_all(cfg: Config | None, *, exec_probe: bool = False) -> list[CheckResult
     if cfg is not None and cfg.memory_backend == "cloud":
         plan += _CLOUD_ONLY_CHECKS
     if exec_probe:
+        # cfg is forwarded so the probe honours the execution profile (codex →
+        # skip, BYO endpoint → configured route); needs_config stays False so
+        # the probe still runs in degraded mode with the default claude brain.
         plan.append(
-            ("headless-exec", lambda c: checks.check_headless_exec(Path.cwd()), False)
+            ("headless-exec", lambda c: checks.check_headless_exec(Path.cwd(), c), False)
         )
     for name, fn, needs_config in plan:
         if cfg is None and needs_config:

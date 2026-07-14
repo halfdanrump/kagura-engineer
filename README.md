@@ -173,7 +173,7 @@ is isolated — one failing check never aborts the rest of the run.
 | `haiku` | an Anthropic auth source resolves (env key or subscription cache) |
 | `memory` | backend-aware: `memory-cloud` reachable, or (when `memory_backend: local`) `memory-local` SQLite writable — host/credentials never echoed |
 | `gh-issue-driven` | the `gh-issue-driven` plugin is installed (the workflow `run` drives) |
-| `headless-exec` | *(opt-in: `--exec-probe`)* a live headless `claude -p` in this repo can actually run commands and edit files — catches the [headless permission](#headless-permissions-run--doctor---exec-probe) walls pre-flight |
+| `headless-exec` | *(opt-in: `--exec-probe`)* a live headless brain, launched in an ephemeral `.kagura-runs` worktree, can actually run commands and edit files (write verified on disk) — catches the [headless permissions](#headless-permissions-run--doctor---exec-probe) walls pre-flight |
 
 Statuses: **OK / WARN / FAIL**.
 
@@ -336,15 +336,25 @@ needs must therefore be granted *up front*, in two places:
 
 2. **Workspace trust** — the allowlist is honoured only for directories the
    *human* has trusted in Claude Code (`hasTrustDialogAccepted` in
-   `~/.claude.json`). Open `claude` once in the repo **and** once in the
-   `.kagura-runs/<repo>/` worktree area and accept the trust dialog. This step
-   is deliberately human-only: an agent must not be able to widen its own
+   `~/.claude.json`). Trust for the repo and trust for the `.kagura-runs/<repo>/`
+   worktree area are **separate** — and since each run gets a fresh
+   `run-<issue>` worktree path, trust must cover the worktree *parent*, not
+   one specific run dir. Open `claude` once in the repo **and** once under
+   `.kagura-runs/<repo>/` and accept the trust dialog. This step is
+   deliberately human-only: an agent must not be able to widen its own
    permissions.
 
-`doctor --exec-probe` verifies both end-to-end: it launches a real headless
-claude in the repo, asks it to run one harmless command and write one temp
-file, and reports exactly which capability is blocked — before a real run
-burns a dispatch discovering it.
+`doctor --exec-probe` verifies both end-to-end, in the context `run` actually
+executes in: it creates an ephemeral git worktree under `.kagura-runs/<repo>/`
+(so the committed allowlist and the worktree-area trust are both exercised),
+launches the resolved headless brain there, asks it to run one
+approval-requiring command from the baseline (`gh auth status` — read-only git
+is approval-free and would prove nothing) and write one uniquely-named temp
+file, verifies the write **on disk** rather than trusting the model's
+self-report, then removes the worktree. It reports exactly which capability is
+blocked — before a real run burns a dispatch discovering it. With
+`brain_backend: codex` the probe is skipped (codex uses its own
+sandbox/approval model, not Claude Code permissions).
 
 ---
 

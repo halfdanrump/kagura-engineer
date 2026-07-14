@@ -8,6 +8,9 @@ import subprocess
 import time
 import urllib.error
 import urllib.request
+import uuid
+from collections.abc import Iterator
+from contextlib import contextmanager
 from pathlib import Path
 
 from kagura_brain import claude as brain_claude
@@ -476,45 +479,139 @@ def check_gh_issue_driven() -> CheckResult:
 
 # --- headless-exec probe (issue #93) ---------------------------------------
 #
-# A headless `claude -p` cannot answer Claude Code's permission prompts, so
-# every capability a run needs must be pre-granted (the repo's
-# `.claude/settings.json` allowlist + the workspace-trust flag). None of the
-# static checks can see those grants, and the walls fail one at a time at
-# runtime — Bash first (start), Edit/Write later (implement). The probe asks a
-# real headless claude, in the target repo, to exercise both capabilities and
-# report which one is blocked. Opt-in (`doctor --exec-probe`): it is the only
-# check that spends tokens and a model round-trip.
+# A headless brain cannot answer Claude Code's permission prompts, so every
+# capability a run needs must be pre-granted (the repo's
+# `.claude/settings.json` allowlist + workspace trust). None of the static
+# checks can see those grants, and the walls fail one at a time at runtime —
+# Bash first (start), Edit/Write later (implement). The probe launches a real
+# headless brain and asks it to exercise both capabilities, then verifies the
+# write on disk rather than trusting the model's self-report. Opt-in
+# (`doctor --exec-probe`): it is the only check that spends tokens and a model
+# round-trip.
 #
-# Launch goes through kagura_brain.claude.invoke — the single hardened
-# `claude -p` launcher (#40): env scrub, Windows shim resolution, timeout-as-
-# result. Constructing a bare claude argv here would revive the unhardened
-# twin the #40 migration removed (test_launcher_seam guards it).
+# The probe runs inside an EPHEMERAL git worktree under the same
+# `.kagura-runs/<repo>/` root `run` uses — trust for that area is distinct
+# from trust for the source repo (issue #93 wall 2), so probing the repo dir
+# alone can pass while the real run still red-halts. If worktree creation
+# fails, the probe degrades to the repo dir and caps the result at WARN so an
+# unexercised worktree context is never reported as fully healthy.
+#
+# Launch goes through the resolved brain (`select_brain`, the same route
+# `run` takes) or, with no config, kagura_brain's default claude handle — the
+# single hardened launcher (#40): env scrub, Windows shim resolution,
+# timeout-as-result. Constructing a bare claude argv here would revive the
+# unhardened twin the #40 migration removed (test_launcher_seam guards it).
 
 _EXEC_PROBE_MARKER = "KAGURA_EXEC_PROBE"
-_EXEC_PROBE_TMP = ".kagura-exec-probe.tmp"
 # A model round-trip plus two tool calls, not a 5 s CLI check.
 _EXEC_PROBE_TIMEOUT = 180
-
-_EXEC_PROBE_PROMPT = (
-    "You are a non-interactive permissions probe for this repository. Do "
-    "exactly this, in order, and nothing else:\n"
-    "1. Run the command `git status` with your Bash tool.\n"
-    f"2. Create a file named {_EXEC_PROBE_TMP} containing the single word "
-    "probe, using your file-writing tool.\n"
-    "If a tool call is blocked, denied, or requires approval, record that "
-    "capability as blocked and continue to the next step. Do not attempt "
-    "workarounds or alternative tools.\n"
-    "Finally print exactly one line, last:\n"
-    f"{_EXEC_PROBE_MARKER} bash=<ok|blocked> write=<ok|blocked>\n"
-)
+_EXEC_PROBE_GIT_TIMEOUT = 30
+# `gh auth status` (not `git status`): Claude Code treats read-only git as
+# approval-free in every mode, so it exercises no grant at all — it would
+# report bash=ok in the exact missing-allowlist case the probe exists to
+# catch. `gh auth status` requires pre-approval and is part of the documented
+# baseline allowlist (README § Headless permissions).
+_EXEC_PROBE_BASH_CMD = "gh auth status"
 
 _EXEC_PROBE_HINT = (
     "pre-grant headless permissions: add the needed Bash(...) patterns plus "
     "Edit/Write to permissions.allow in <repo>/.claude/settings.json, and "
-    "trust the repo (and the .kagura-runs worktree dir) in Claude Code — a "
-    "headless run cannot answer approval prompts; see README § Headless "
-    "permissions"
+    "trust BOTH the repo and the .kagura-runs/<repo> worktree parent in "
+    "Claude Code — a headless run cannot answer approval prompts; see README "
+    "§ Headless permissions"
 )
+
+
+def _exec_probe_name() -> str:
+    """A unique per-probe temp filename.
+
+    Unique so the probe can never collide with (and later delete) a
+    pre-existing user file of the same name, and so the observed-write
+    verification below is checking a file only this probe could have created.
+    """
+    return f".kagura-exec-probe-{uuid.uuid4().hex[:8]}.tmp"
+
+
+def _exec_probe_prompt(probe_name: str) -> str:
+    return (
+        "You are a non-interactive permissions probe for this repository. Do "
+        "exactly this, in order, and nothing else:\n"
+        f"1. Run the command `{_EXEC_PROBE_BASH_CMD}` with your Bash tool. A "
+        "command that RUNS but exits non-zero still counts as ok — only "
+        "report blocked if the tool call itself was denied or required "
+        "approval.\n"
+        f"2. Create a file named {probe_name} containing the single word "
+        "probe, using your file-writing tool.\n"
+        "If a tool call is blocked, denied, or requires approval, record that "
+        "capability as blocked and continue to the next step. Do not attempt "
+        "workarounds or alternative tools.\n"
+        "Finally print exactly one line, last:\n"
+        f"{_EXEC_PROBE_MARKER} bash=<ok|blocked> write=<ok|blocked>\n"
+    )
+
+
+@contextmanager
+def _probe_workdir(repo: Path) -> "Iterator[tuple[Path, str | None]]":
+    """Yield (dir, caveat) — an ephemeral worktree under `.kagura-runs/<repo>/`,
+    or (repo, caveat-string) when worktree creation fails.
+
+    The worktree reproduces the context `run` actually executes in: the repo's
+    committed `.claude/settings.json` is checked out into it, and its path
+    falls under the `.kagura-runs` trust scope. Removal is forced in the
+    `finally` so a crashed probe cannot leak worktrees.
+    """
+    # Lazy import: run/__init__ imports doctor.registry, so a module-level
+    # import here would be circular.
+    from ..run.worktree import worktree_root
+
+    target = worktree_root(repo) / f"doctor-probe-{uuid.uuid4().hex[:8]}"
+    try:
+        target.parent.mkdir(parents=True, exist_ok=True)
+        proc = run_text(
+            ["git", "worktree", "add", "--detach", str(target)],
+            cwd=repo, capture_output=True, timeout=_EXEC_PROBE_GIT_TIMEOUT,
+        )
+    except (OSError, subprocess.SubprocessError) as exc:
+        yield repo, f"worktree creation failed ({exc})"
+        return
+    if proc.returncode != 0:
+        detail = (proc.stderr or proc.stdout or "").strip().splitlines()
+        yield repo, (
+            "worktree creation failed"
+            + (f" ({detail[-1]})" if detail else "")
+        )
+        return
+    try:
+        yield target, None
+    finally:
+        try:
+            run_text(
+                ["git", "worktree", "remove", "--force", str(target)],
+                cwd=repo, capture_output=True, timeout=_EXEC_PROBE_GIT_TIMEOUT,
+            )
+        except (OSError, subprocess.SubprocessError):
+            pass
+
+
+def _resolve_probe_invoke(cfg):
+    """The brain invoke callable for the probe, honouring the execution profile.
+
+    With a config, route through `select_brain` — the same resolution `run`
+    uses — so a BYO endpoint/key is probed through its configured route. With
+    no config (doctor's degraded mode), fall back to kagura_brain's default
+    claude handle, mirroring the registry's brain-cli default.
+    """
+    if cfg is None:
+        return lambda prompt, *, cwd: brain_claude.invoke(
+            prompt, cwd=cwd, timeout=_EXEC_PROBE_TIMEOUT,
+        )
+    # Lazy import — see _probe_workdir.
+    from ..run.brain_select import select_brain
+
+    call = select_brain(cfg, os.environ)
+    return lambda prompt, *, cwd: call.invoke(
+        prompt, cwd=cwd, timeout=_EXEC_PROBE_TIMEOUT,
+    )
 
 
 def _parse_exec_probe_marker(stdout: str) -> dict[str, str] | None:
@@ -539,15 +636,25 @@ def _parse_exec_probe_marker(stdout: str) -> dict[str, str] | None:
     return None
 
 
-def check_headless_exec(repo: Path) -> CheckResult:
-    """Live-probe that a headless claude can act in `repo` (issue #93).
+def check_headless_exec(repo: Path, cfg=None) -> CheckResult:
+    """Live-probe that a headless brain can act where `run` runs (issue #93).
 
-    Runs `claude -p` in the repo asking it to (a) run one harmless command and
-    (b) write one temp file, then parses the reported capability map. Catches
-    all three permission walls (Bash allowlist, workspace trust, Edit/Write)
-    before a real run burns a dispatch on them.
+    Launches the resolved brain inside an ephemeral `.kagura-runs` worktree,
+    asks it to (a) run one allowlist-exercising command and (b) write one
+    uniquely-named temp file, then verifies the write ON DISK before trusting
+    the reported capability map. Catches all three permission walls (Bash
+    allowlist, workspace trust — including the worktree's, Edit/Write) before
+    a real run burns a dispatch on them.
     """
     name = "headless-exec"
+    if cfg is not None and getattr(cfg, "brain_backend", "claude") == "codex":
+        return CheckResult(
+            name,
+            Status.WARN,
+            "brain_backend=codex: probe skipped — it exercises Claude Code "
+            "permission walls, which do not apply to codex's own "
+            "sandbox/approval model",
+        )
     if shutil.which("claude") is None:
         return CheckResult(
             name,
@@ -556,18 +663,30 @@ def check_headless_exec(repo: Path) -> CheckResult:
             "fix the brain-cli check first, then re-run with --exec-probe",
         )
     try:
-        res = brain_claude.invoke(
-            _EXEC_PROBE_PROMPT, cwd=repo, timeout=_EXEC_PROBE_TIMEOUT,
-        )
-    except (OSError, subprocess.SubprocessError) as exc:
-        return CheckResult(name, Status.FAIL, f"probe launch failed: {exc}", None)
-    finally:
-        # The probe file is written by the child; remove it no matter how the
-        # probe ended so repeated doctor runs never dirty the work tree.
+        invoke = _resolve_probe_invoke(cfg)
+    except Exception as exc:  # ConfigError half-pair, etc. — mirror doctor's degrade style
+        return CheckResult(name, Status.FAIL, f"brain resolution failed: {exc}", None)
+    probe_name = _exec_probe_name()
+    with _probe_workdir(repo) as (workdir, caveat):
+        probe_file = workdir / probe_name
         try:
-            (repo / _EXEC_PROBE_TMP).unlink()
-        except OSError:
-            pass
+            res = invoke(_exec_probe_prompt(probe_name), cwd=workdir)
+            # Observed ground truth, captured BEFORE cleanup: the model can
+            # misreport or skip a tool call, so the marker alone is not proof.
+            wrote = False
+            try:
+                wrote = probe_file.is_file() and "probe" in probe_file.read_text(
+                    encoding="utf-8", errors="replace"
+                )
+            except OSError:
+                wrote = False
+        except (OSError, subprocess.SubprocessError) as exc:
+            return CheckResult(name, Status.FAIL, f"probe launch failed: {exc}", None)
+        finally:
+            try:
+                probe_file.unlink()
+            except OSError:
+                pass
     if res.timed_out:
         return CheckResult(
             name,
@@ -580,7 +699,7 @@ def check_headless_exec(repo: Path) -> CheckResult:
         return CheckResult(
             name,
             Status.FAIL,
-            f"claude exited {res.returncode}: {res.detail() or '(no output)'}",
+            f"brain exited {res.returncode}: {res.detail() or '(no output)'}",
             None,
         )
     caps = _parse_exec_probe_marker(res.stdout or "")
@@ -590,22 +709,43 @@ def check_headless_exec(repo: Path) -> CheckResult:
             Status.WARN,
             "probe ran but printed no marker line; capability state unknown",
             "re-run with --exec-probe; if it persists, probe manually with "
-            "`claude -p` in the repo",
+            "a headless brain in the repo",
         )
     blocked = []
     if caps.get("bash") != "ok":
         blocked.append("commands (Bash)")
     if caps.get("write") != "ok":
         blocked.append("file edits (Write)")
+    elif not wrote:
+        # Marker said ok but the file was never observed — an unverified
+        # model report must not produce a green pre-flight.
+        return CheckResult(
+            name,
+            Status.FAIL,
+            "probe reported write=ok but the probe file was never observed "
+            "on disk — unverified model report",
+            "re-run with --exec-probe; if it persists, the write path is "
+            "not trustworthy in this repo — " + _EXEC_PROBE_HINT,
+        )
     if blocked:
         return CheckResult(
             name,
             Status.FAIL,
-            "headless claude is blocked on: " + ", ".join(blocked),
+            "headless brain is blocked on: " + ", ".join(blocked),
             _EXEC_PROBE_HINT,
+        )
+    if caveat is not None:
+        return CheckResult(
+            name,
+            Status.WARN,
+            "headless brain can run commands and edit files in the repo dir, "
+            f"but the .kagura-runs worktree context was NOT exercised ({caveat})",
+            "fix worktree creation (is this a git repo?) and re-run "
+            "--exec-probe to cover the context `run` actually executes in",
         )
     return CheckResult(
         name,
         Status.OK,
-        "headless claude can run commands and edit files in this repo",
+        "headless brain can run commands and edit files in an ephemeral "
+        ".kagura-runs worktree",
     )

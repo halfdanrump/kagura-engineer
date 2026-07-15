@@ -1,6 +1,6 @@
 ---
 name: review
-description: Use to review a git diff, branch, or PR with the cost-free kagura-engineer reviewer — shells out to `kagura-engineer review [target]`, returning a structured verdict and findings. With `--fix` it is a HARNESS that edits files and commits; without `--fix` it is read-only.
+description: Use to review a git ref, branch, or PR with the local kagura-engineer reviewer — shells out to `kagura-engineer review [target]`, returning a structured verdict and findings. With `--fix` it is a HARNESS that edits files and commits; without `--fix` it is read-only.
 ---
 
 # kagura-engineer: review
@@ -12,8 +12,9 @@ shells out, and surfaces the report.
 
 > ⚠️ **Two modes — know which you are in:**
 > - **Default (read-only)** — reviews the diff and reports. No repo mutation.
-> - **`--fix` (Harness)** — on a red verdict it invokes `claude -p` to edit blocking
->   findings and **commit** them, then re-reviews (bounded by `config.review.max_loops`).
+> - **`--fix` (Harness)** — on a red verdict it invokes the selected brain backend to
+>   edit blocking findings and **commit** them, then re-reviews (bounded by
+>   `config.review.max_loops`).
 >   This mutates the repo and spends model budget — confirm with the user first.
 
 **Announce:** "Using the kagura-engineer:review skill" (add "— with --fix, this is a Harness that commits" when fixing).

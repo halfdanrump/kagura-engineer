@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "kagura-engineer"
 dynamic = ["version"]
-description = "Autonomous coding harness over Claude Code + Kagura Memory"
+description = "Autonomous memory-grounded coding harness over Claude Code or Codex"
 readme = "README.md"
 requires-python = ">=3.11"
 license = "Apache-2.0"
@@ -13,6 +13,7 @@ license-files = ["LICENSE", "NOTICE"]
 authors = [{ name = "Kagura AI", email = "dev@kagura-ai.com" }]
 keywords = [
     "claude-code",
+    "codex",
     "ai-agent",
     "coding-agent",
     "autonomous-agent",
@@ -28,6 +29,7 @@ classifiers = [
     "Intended Audience :: Developers",
     "Operating System :: POSIX :: Linux",
     "Operating System :: MacOS",
+    "Operating System :: Microsoft :: Windows",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",

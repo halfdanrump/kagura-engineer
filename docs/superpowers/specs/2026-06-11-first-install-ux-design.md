@@ -1,5 +1,10 @@
 # First-install UX: doctor/setup without repo.yaml — design
 
+> [!NOTE]
+> Historical design record. It may describe pre-implementation state, internal
+> plan numbers, or behavior that has since changed. See the
+> [current README](../../../README.md) and [document map](../../README.md).
+
 **Issue:** #71. **Date:** 2026-06-11. **Status:** approved, pre-implementation.
 
 ## Problem

@@ -1,5 +1,10 @@
 # Failover Memory — Cloud-primary write durability with a local WAL
 
+> [!NOTE]
+> Historical design record. It may describe pre-implementation state, internal
+> plan numbers, or behavior that has since changed. See the
+> [current README](../../../README.md) and [document map](../../README.md).
+
 **Date:** 2026-06-08
 **Status:** Design approved (brainstorming) — pending spec review → writing-plans
 **Context:** kagura-engineer `run`/`goal` memory layer

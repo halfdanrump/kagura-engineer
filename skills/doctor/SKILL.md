@@ -1,6 +1,6 @@
 ---
 name: doctor
-description: Use before any kagura-engineer run/review, or when the harness reports a blocked environment — diagnoses the local setup (git, claude, gh, ollama, memory backend, gh-issue-driven plugin) by shelling out to `kagura-engineer doctor` and reports what must be fixed.
+description: Use before any kagura-engineer run/review, or when the harness reports a blocked environment — diagnoses the local setup (git, selected brain CLI, gh, ollama, memory backend, and gh-issue-driven plugin) by shelling out to `kagura-engineer doctor` and reports what must be fixed.
 ---
 
 # kagura-engineer: doctor
@@ -37,7 +37,8 @@ result. If `kagura-engineer` is not on PATH, tell the user to install it
    |------|-----------|---------|
    | 0    | `ok` / `warn` | Safe to proceed. `warn` items are advisory (e.g. missing ollama model, cloud credential unverified). |
    | 1    | `fail`    | **Must stop.** At least one blocking check failed. |
-   | 2    | —         | Config error (`repo.yaml` missing/invalid) before checks ran. |
+   A missing or invalid `repo.yaml` is represented as a synthetic `config`
+   failure alongside the config-free checks, so it exits `1` rather than `2`.
 
 4. **Surface the result.** Print the per-check `name` / `status` / `detail` /
    `fix_hint` table from the JSON. Lead with the blocking (`fail`) checks.

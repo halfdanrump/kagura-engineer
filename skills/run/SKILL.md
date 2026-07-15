@@ -1,6 +1,6 @@
 ---
 name: run
-description: Use to drive a single GitHub issue to a pull request with the kagura-engineer harness — shells out to `kagura-engineer run <issue>` (guard → recall → worktree → start → implement → ship → persist). HARNESS — this mutates the repo, creates a PR, and spends model budget; confirm with the user before launching.
+description: Use to drive a single GitHub issue to a pull request with the kagura-engineer harness — shells out to `kagura-engineer run` with an issue number (guard → recall → worktree → start → implement → ship → persist). HARNESS — this mutates the repo, creates a PR, and spends model budget; confirm with the user before launching.
 ---
 
 # kagura-engineer: run
@@ -14,7 +14,7 @@ orchestration lives entirely in the CLI; this skill discovers config, gates on
 > understands the consequences and has confirmed:
 > - **Repo mutation** — creates a `run-<issue>` git worktree and commits there.
 > - **PR creation** — opens a GitHub pull request via gh-issue-driven on success.
-> - **Cost** — invokes `claude -p` multiple times (start / implement / ship).
+> - **Cost** — invokes the selected brain backend multiple times (start / implement / ship).
 > - **HITL** — gates can halt (`blocked`, exit 2) and wait for a human decision.
 
 **Announce:** "Using the kagura-engineer:run skill — this is a Harness that will create a PR."
@@ -57,14 +57,16 @@ kagura-engineer:run <issue-number>
    kagura-engineer run <issue> --json
    ```
 
-   Add `--unattended` to suppress interactive gates, `--no-remember` to skip the memory
-   savepoint. Without `--json`, phase progress streams live.
+   Add `--unattended` to proceed without prompting on green/yellow gates
+   (red/unknown still halt), or `--no-remember` to skip the memory savepoint.
+   Without `--json`, phase progress streams live.
 
 6. **Interpret the status.** `status == "ok"` (exit 0) → PR created (`pr_url`).
    `"blocked"` (exit 2) → a gate halted; show `resume_hint` and surface the verdict for
    a human decision. `"fail"` (exit 1) → hard error; show the failing phase's `detail`
    from the `phases` array (there is no top-level `detail` key).
 
-7. **Surface & hand off.** Print the phase table and `pr_url`. On success, suggest
-   `kagura-engineer:review <pr_url>` to review the PR. On `blocked`/`fail`, surface the
-   `resume_hint` so the user can retry after addressing the cause.
+7. **Surface & hand off.** Print the phase table and `pr_url`. On success, extract the
+   PR number from `pr_url` and suggest `kagura-engineer:review <PR-number>`. On
+   `blocked`/`fail`, surface the `resume_hint` so the user can retry after addressing
+   the cause.

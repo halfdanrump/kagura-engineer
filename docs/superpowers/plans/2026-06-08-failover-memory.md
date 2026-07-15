@@ -1,5 +1,10 @@
 # Failover Memory Implementation Plan
 
+> [!NOTE]
+> Historical design record. It may describe pre-implementation state, internal
+> plan numbers, or behavior that has since changed. See the
+> [current README](../../../README.md) and [document map](../../README.md).
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Make Memory Cloud writes durable across Cloud outages by buffering critical writes (`remember` savepoint + `set_state`) to a local WAL and auto-replaying them on the next run.

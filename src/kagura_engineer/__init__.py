@@ -1,3 +1,3 @@
-"""kagura-engineer — autonomous coding harness over Claude Code + Kagura Memory."""
+"""kagura-engineer — autonomous, memory-grounded coding harness."""
 
 __version__ = "0.5.0"

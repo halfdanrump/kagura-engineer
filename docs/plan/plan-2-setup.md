@@ -1,5 +1,10 @@
 # Plan 2 — `setup` コマンド (依存解決 / auth 確立 / 修復)
 
+> [!NOTE]
+> Historical design record. It may describe pre-implementation state, internal
+> plan numbers, or behavior that has since changed. See the
+> [current README](../../README.md) and [document map](../README.md).
+
 **Status:** 設計 (implementation not started)  
 **Date:** 2026-06-06  
 **Author:** kagura-engineer dev  

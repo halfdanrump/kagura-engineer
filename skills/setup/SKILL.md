@@ -1,6 +1,6 @@
 ---
 name: setup
-description: Use when kagura-engineer:doctor reports a blocked or failing environment — installs and authenticates the harness prerequisites (git, claude, gh, ollama models, memory-cloud auth) by shelling out to `kagura-engineer setup`, then re-checks with doctor.
+description: Use when kagura-engineer:doctor reports a blocked or failing environment — scaffolds missing config, installs and authenticates harness prerequisites, and generates Memory Cloud MCP config by shelling out to `kagura-engineer setup`, then re-checks with doctor.
 ---
 
 # kagura-engineer: setup
@@ -13,9 +13,10 @@ installed CLI and surfaces the result.
 
 Usage: `kagura-engineer:setup` — no arguments. Add `--fix <step>` to repair one step, `--dry-run` to preview.
 
-> Note: `setup` installs/authenticates **tooling**. It does **not** create `repo.yaml`
-> for you — author that file first (backend choice, workspace/context ids). Setup may
-> prompt for credentials unless run with `--no-input`.
+> Note: when `repo.yaml` is missing, `setup` scaffolds it automatically and reports
+> the blank Cloud fields as `NEEDS_USER`. Fill in the backend choice and any required
+> workspace/context ids, then re-run. Setup may prompt for credentials unless run with
+> `--no-input`.
 
 ## Steps
 
@@ -34,7 +35,9 @@ Usage: `kagura-engineer:setup` — no arguments. Add `--fix <step>` to repair on
    ```
 
    To repair a single step only, use `--fix <step>` where `<step>` is one of
-   `git`, `claude-code`, `gh`, `ollama`, `ollama-models`, `memory-cloud`.
+   `git`, `claude-code`, `gh`, `ollama`, `ollama-models`, `memory-cloud`,
+   `memory-mcp`. Add `--full` to the full run or the `memory-mcp` step to also
+   install memory hooks and skills; the default generates `.mcp.json` only.
 
    Exit-code contract: `0` = all steps ok/skipped · `1` = any step failed
    (**takes priority over 2**) · `2` = a step needs user input with no failure

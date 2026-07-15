@@ -1,5 +1,10 @@
 # Brain backend selection (codex / Ollama Cloud) — design
 
+> [!NOTE]
+> Historical design record. It may describe pre-implementation state, internal
+> plan numbers, or behavior that has since changed. See the
+> [current README](../../../README.md) and [document map](../../README.md).
+
 **Issue:** #51 (deferred from #48). **Date:** 2026-06-10. **Status:** approved, pre-implementation.
 
 ## Problem

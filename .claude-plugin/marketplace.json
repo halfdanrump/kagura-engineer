@@ -1,7 +1,7 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "kagura-engineer",
-  "description": "Autonomous coding harness over Claude Code + Kagura Memory — drives a GitHub issue to a PR, with design/ship gates and HITL confirmation. Thin skill wrapper around the kagura-engineer CLI.",
+  "description": "Autonomous, memory-grounded coding harness over Claude Code or Codex — drives a GitHub issue to a PR with review gates and HITL confirmation. Thin Claude Code skill wrapper around the kagura-engineer CLI.",
   "owner": {
     "name": "Kagura AI, Inc.",
     "url": "https://github.com/kagura-ai"

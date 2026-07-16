@@ -1,5 +1,10 @@
 # Memory auto-store (failure-mode learning) — v1 design
 
+> [!NOTE]
+> Historical design record. It may describe pre-implementation state, internal
+> plan numbers, or behavior that has since changed. See the
+> [current README](../../../README.md) and [document map](../../README.md).
+
 - **Date:** 2026-06-08
 - **Status:** Approved (brainstorming) — pending implementation plan
 - **Scope:** Plan 5+ sub-project 1 of 3 (the other two — Sleep/decay maintenance, parallel worktree runs in `goal` — are out of scope here)

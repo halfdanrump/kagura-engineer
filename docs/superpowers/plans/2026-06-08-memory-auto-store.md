@@ -1,5 +1,10 @@
 # Memory auto-store (failure-mode learning) v1 — Implementation Plan
 
+> [!NOTE]
+> Historical design record. It may describe pre-implementation state, internal
+> plan numbers, or behavior that has since changed. See the
+> [current README](../../../README.md) and [document map](../../README.md).
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Auto-store failure and outcome memories during a `run`, and surface prior failures of an issue preemptively in grounding — so recurring failures cost less each time.

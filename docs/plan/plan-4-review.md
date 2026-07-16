@@ -1,5 +1,10 @@
 # Plan 4 — `review` Subcommand (reviewer 連結, v1: review + gate) Implementation Plan
 
+> [!NOTE]
+> Historical design record. It may describe pre-implementation state, internal
+> plan numbers, or behavior that has since changed. See the
+> [current README](../../README.md) and [document map](../README.md).
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Add a standalone `kagura-engineer review [TARGET]` command that launches the separate `kagura-code-reviewer` product, reads its machine-readable JSON envelope (never scrapes Markdown), and maps the `verdict` to a proceed/halt gate — no auto-fix loop in this slice.

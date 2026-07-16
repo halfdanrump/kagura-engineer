@@ -1,5 +1,10 @@
 # Plan 3 — `run` コマンド (memory-grounded agent loop / idea→PR)
 
+> [!NOTE]
+> Historical design record. It may describe pre-implementation state, internal
+> plan numbers, or behavior that has since changed. See the
+> [current README](../../README.md) and [document map](../README.md).
+
 **Status:** 設計 (implementation not started)
 **Date:** 2026-06-07
 **Author:** kagura-engineer dev

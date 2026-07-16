@@ -232,14 +232,13 @@ def _spy_run_plan(captured):
     return _spy
 
 
-def test_setup_missing_config_auto_scaffolds_and_degrades(monkeypatch):
+def test_setup_missing_config_auto_scaffolds_and_degrades(tmp_path, monkeypatch):
     captured = {}
     monkeypatch.setattr("kagura_engineer.cli.run_plan", _spy_run_plan(captured))
-    with runner.isolated_filesystem():
-        result = runner.invoke(app, ["setup"])  # default --config repo.yaml
-        from pathlib import Path as _P
-        # The fresh checkout's repo.yaml was scaffolded (same as `init`).
-        assert _P("repo.yaml").is_file()
+    monkeypatch.chdir(tmp_path)
+    result = runner.invoke(app, ["setup"])  # default --config repo.yaml
+    # The fresh checkout's repo.yaml was scaffolded (same as `init`).
+    assert (tmp_path / "repo.yaml").is_file()
     assert "scaffolding" in result.output.lower()
     # Degraded mode: run_plan called with no config + a synthetic config step.
     assert captured["cfg"] is None
@@ -282,20 +281,19 @@ def test_setup_invalid_config_hint_says_fix_not_creds(tmp_path, monkeypatch):
     assert "cloud credentials" not in hint
 
 
-def test_setup_dry_run_suppresses_scaffold(monkeypatch):
+def test_setup_dry_run_suppresses_scaffold(tmp_path, monkeypatch):
     captured = {}
     monkeypatch.setattr("kagura_engineer.cli.run_plan", _spy_run_plan(captured))
-    with runner.isolated_filesystem():
-        result = runner.invoke(app, ["setup", "--dry-run"])
-        from pathlib import Path as _P
-        # Preview must not write: no repo.yaml created under --dry-run.
-        assert not _P("repo.yaml").exists()
+    monkeypatch.chdir(tmp_path)
+    result = runner.invoke(app, ["setup", "--dry-run"])
+    # Preview must not write: no repo.yaml created under --dry-run.
+    assert not (tmp_path / "repo.yaml").exists()
     assert captured["cfg"] is None  # still degraded, just no scaffold
     assert captured["config_step"] is not None
     assert result.exit_code == 2
 
 
-def test_setup_scaffold_failure_is_config_fail_row(monkeypatch):
+def test_setup_scaffold_failure_is_config_fail_row(tmp_path, monkeypatch):
     # An unwritable dir must surface as a `config` FAIL row, never a traceback.
     captured = {}
     monkeypatch.setattr("kagura_engineer.cli.run_plan", _spy_run_plan(captured))
@@ -304,8 +302,8 @@ def test_setup_scaffold_failure_is_config_fail_row(monkeypatch):
         raise OSError("read-only file system")
 
     monkeypatch.setattr("kagura_engineer.cli.scaffold", _boom)
-    with runner.isolated_filesystem():
-        result = runner.invoke(app, ["setup"])
+    monkeypatch.chdir(tmp_path)
+    result = runner.invoke(app, ["setup"])
     # The OSError was caught (only the clean typer.Exit/SystemExit remains).
     assert not isinstance(result.exception, OSError)
     assert captured["config_step"] is not None

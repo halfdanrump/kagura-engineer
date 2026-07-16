@@ -49,6 +49,8 @@ While the project is in `0.x`, minor versions may carry breaking changes.
   `repo.yaml` with `auto` / `always` / `never`, letting operators tune whether
   the implement phase runs an inner review pass. (#75)
 
+## [0.3.3] — 2026-06-11
+
 ### Fixed
 
 - Windows (cp932 / non-UTF-8 locale): `init`, `doctor`, `setup`, and the review
@@ -254,7 +256,14 @@ First public release. `kagura-engineer` is a `0.x` autonomous coding harness ove
   just `profile` + `memory_backend: local`. They stay required for the (default)
   cloud backend.
 
-[Unreleased]: https://github.com/kagura-ai/kagura-engineer/compare/v0.2.1...HEAD
+[Unreleased]: https://github.com/kagura-ai/kagura-engineer/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/kagura-ai/kagura-engineer/compare/v0.4.1...v0.5.0
+[0.4.1]: https://github.com/kagura-ai/kagura-engineer/compare/v0.4.0...v0.4.1
+[0.4.0]: https://github.com/kagura-ai/kagura-engineer/compare/v0.3.3...v0.4.0
+[0.3.3]: https://github.com/kagura-ai/kagura-engineer/compare/v0.3.2...v0.3.3
+[0.3.2]: https://github.com/kagura-ai/kagura-engineer/compare/v0.3.1...v0.3.2
+[0.3.1]: https://github.com/kagura-ai/kagura-engineer/compare/v0.3.0...v0.3.1
+[0.3.0]: https://github.com/kagura-ai/kagura-engineer/compare/v0.2.1...v0.3.0
 [0.2.1]: https://github.com/kagura-ai/kagura-engineer/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/kagura-ai/kagura-engineer/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/kagura-ai/kagura-engineer/releases/tag/v0.1.0

@@ -1,5 +1,10 @@
 # Plan 5 — `LocalMemoryClient` (offline SQLite memory backend)
 
+> [!NOTE]
+> Historical design record. It may describe pre-implementation state, internal
+> plan numbers, or behavior that has since changed. See the
+> [current README](../../README.md) and [document map](../README.md).
+
 **Status:** ✅ done (merged). Implemented directly with TDD; final adversarial review applied.
 
 **Goal:** Let `run`/`review` ground themselves fully offline — no Memory Cloud SDK, no API key, no network — by adding a SQLite-backed implementation of the existing `MemoryClient` Protocol, selectable by one config switch.

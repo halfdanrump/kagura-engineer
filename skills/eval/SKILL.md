@@ -1,6 +1,6 @@
 ---
 name: eval
-description: Use to measure whether memory grounding actually improves PR quality — shells out to `kagura-engineer eval <issues...>`, running the SAME fixed issue set in two arms (recall ON vs OFF) and printing an A/B table. HARNESS — high cost; it runs the full loop twice per issue and mutates the repo. Confirm with the user before launching.
+description: Use to measure whether memory grounding actually improves PR quality — shells out to `kagura-engineer eval` with one or more issue numbers, running the SAME fixed issue set in two arms (recall ON vs OFF) and printing an A/B table. HARNESS — high cost; it runs the full loop twice per issue and mutates the repo. Confirm with the user before launching.
 ---
 
 # kagura-engineer: eval
@@ -16,7 +16,7 @@ this skill discovers config, gates on `doctor`, shells out, and surfaces the res
 > ⚠️ **This is a Harness.** Before launching, confirm the user understands:
 > - **Repo mutation × 2N** — the full run loop runs twice per issue (a worktree, commits,
 >   and a PR per arm). With `--review` the auto-fix loop also mutates each arm's branch.
-> - **Cost** — `run`'s `claude -p` budget, doubled across both arms of every issue.
+> - **Cost** — `run`'s selected brain budget, doubled across both arms of every issue.
 > - **Disposable issue set** — run it on a pinned, throwaway issue set, not production work.
 
 **Announce:** "Using the kagura-engineer:eval skill — this is a Harness that runs the loop twice per issue."
